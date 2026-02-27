@@ -1,0 +1,520 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  phone             String?   @unique
+  password          String
+  name              String?
+  isActive          Boolean   @default(true)
+  isVerified        Boolean   @default(false)
+  verificationType  String?   // "aadhaar", "pan", "manual"
+  verificationDocs  String?   // JSON array of document URLs
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  profile           Profile?
+  subscriptions     Subscription[]
+  sentInterests     Interest[] @relation("SentInterests")
+  receivedInterests Interest[] @relation("ReceivedInterests")
+  sentMessages      Message[]  @relation("SentMessages")
+  receivedMessages  Message[]  @relation("ReceivedMessages")
+  reports           Report[]
+  blocks            Block[]
+  adminActions      AdminAction[]
+  payments          Payment[]
+  achievements      UserAchievement[]
+  forumPosts        ForumPost[]
+  blogPosts         BlogPost[]
+  events            Event[]
+  astroProfile      AstroProfile?
+  
+  @@map("users")
+}
+
+model Profile {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  createdBy           String?   // User ID who created (for family profiles)
+  
+  // Basic Information
+  firstName           String
+  lastName            String
+  gender              String    // "male", "female", "other"
+  dateOfBirth         DateTime
+  age                 Int       // Computed from DOB
+  height              Float?    // in cm
+  weight              Float?    // in kg
+  bloodGroup          String?
+  complexion          String?
+  physicalStatus      String?   // "normal", "disabled", "etc"
+  maritalStatus       String    // "never_married", "divorced", "widowed"
+  children            Int       @default(0)
+  childrenLiving      Int?
+  
+  // Location
+  country             String
+  state               String
+  city                String
+  pincode             String?
+  willingToRelocate   Boolean   @default(false)
+  preferredCountries  String?   // JSON array
+  
+  // Religion & Culture
+  religion            String
+  caste               String?
+  subCaste            String?
+  motherTongue        String
+  canSpeakLanguages   String?   // JSON array
+  vegetarian          Boolean?
+  drinking            String?   // "no", "occasionally", "regularly"
+  smoking             String?   // "no", "occasionally", "regularly"
+  
+  // Education & Career
+  education           String?
+  educationField      String?
+  occupation          String?
+  occupationType      String?   // "government", "private", "business", "self_employed"
+  company             String?
+  income              String?   // income range
+  incomeCurrency      String    @default("INR")
+  workLocation        String?
+  
+  // Family
+  familyType          String?   // "joint", "nuclear", "extended"
+  familyValues        String?   // "traditional", "moderate", "liberal"
+  familyStatus        String?   // "middle_class", "upper_middle", "rich", "poor"
+  fatherOccupation    String?
+  motherOccupation    String?
+  brothers            Int       @default(0)
+  sisters             Int       @default(0)
+  marriedBrothers     Int       @default(0)
+  marriedSisters      Int       @default(0)
+  
+  // Partner Preferences
+  preferredAgeMin     Int?
+  preferredAgeMax     Int?
+  preferredHeightMin  Float?
+  preferredHeightMax  Float?
+  preferredReligion   String?
+  preferredCaste      String?
+  preferredEducation  String?
+  preferredOccupation String?
+  preferredIncome     String?
+  preferredLocation   String?
+  maritalStatusPref   String?
+  
+  // About & Lifestyle
+  aboutMe             String?
+  hobbies             String?   // JSON array
+  interests           String?   // JSON array
+  lifestyle           String?
+  diet                String?
+  exercise            String?
+  
+  // Privacy Settings
+  showPhone           Boolean   @default(false)
+  showEmail           Boolean   @default(false)
+  showIncome          Boolean   @default(false)
+  photoPrivacy        String    @default("public") // "public", "protected", "private"
+  contactPrivacy      String    @default("premium") // "public", "premium", "private"
+  
+  // Profile Strength
+  profileStrength     Int       @default(0) // 0-100
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relations
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos              Photo[]
+  videos              Video[]
+  verificationDocs    VerificationDoc[]
+  profileViews        ProfileView[]
+  compatibilityScores CompatibilityScore[]
+  
+  @@map("profiles")
+}
+
+model Photo {
+  id         String   @id @default(cuid())
+  profileId  String
+  url        String
+  thumbnail  String?
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  isApproved Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("photos")
+}
+
+model Video {
+  id         String   @id @default(cuid())
+  profileId  String
+  url        String
+  thumbnail  String?
+  caption    String?
+  duration   Int?     // in seconds
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("videos")
+}
+
+model Interest {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  status      String   @default("pending") // "pending", "accepted", "declined", "withdrawn"
+  message     String?
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+  
+  fromUser    User     @relation("SentInterests", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User     @relation("ReceivedInterests", fields: [toUserId], references: [id], onDelete: Cascade)
+  
+  @@unique([fromUserId, toUserId])
+  @@map("interests")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  content    String
+  type       String   @default("text") // "text", "image", "voice", "video"
+  mediaUrl   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  fromUser   User     @relation("SentMessages", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User     @relation("ReceivedMessages", fields: [toUserId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  userId       String
+  plan         String   // "basic", "gold", "platinum"
+  status       String   @default("active") // "active", "expired", "cancelled"
+  startDate    DateTime
+  endDate      DateTime
+  price        Float
+  currency     String   @default("INR")
+  paymentId    String?
+  features     String?  // JSON array of features
+  autoRenew    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("subscriptions")
+}
+
+model VerificationDoc {
+  id         String   @id @default(cuid())
+  profileId  String
+  type       String   // "aadhaar", "pan", "passport", "photo_id"
+  docUrl     String
+  status     String   @default("pending") // "pending", "approved", "rejected"
+  adminNotes String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("verification_docs")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reportedId  String
+  reason      String
+  description String?
+  status      String   @default("pending") // "pending", "reviewed", "resolved", "dismissed"
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  
+  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  @@map("reports")
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  userId    String
+  blockedId String
+  reason    String?
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, blockedId])
+  @@map("blocks")
+}
+
+model ProfileView {
+  id        String   @id @default(cuid())
+  profileId String
+  viewerId  String
+  createdAt DateTime @default(now())
+  
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("profile_views")
+}
+
+model CompatibilityScore {
+  id              String   @id @default(cuid())
+  profileId       String
+  targetProfileId String
+  score           Float
+  factors         String?  // JSON object with individual factor scores
+  calculatedAt    DateTime @default(now())
+  
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@unique([profileId, targetProfileId])
+  @@map("compatibility_scores")
+}
+
+model AdminAction {
+  id          String   @id @default(cuid())
+  adminId     String
+  targetUserId String?
+  action      String   // "verify", "suspend", "delete", "approve_photo", etc.
+  details     String?
+  createdAt   DateTime @default(now())
+  
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  @@map("admin_actions")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String   // "subscription", "boost", "gift", "feature"
+  amount        Float
+  currency      String   @default("INR")
+  status        String   @default("pending") // "pending", "completed", "failed", "refunded"
+  paymentMethod String   // "card", "upi", "net_banking", "wallet"
+  transactionId String?
+  gatewayResponse String? // JSON response from payment gateway
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  points      Int
+  category    String // "profile", "engagement", "trust", "premium"
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  category  String
+  tags      String?  // JSON array
+  views     Int      @default(0)
+  likes     Int      @default(0)
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  ForumComment[]
+  
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@map("forum_comments")
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String
+  excerpt     String?
+  featuredImage String?
+  category    String
+  tags        String?  // JSON array
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("blog_posts")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  location    String
+  startDate   DateTime
+  endDate     DateTime
+  type        String   // "matrimonial", "cultural", "meetup"
+  maxAttendees Int?
+  isVirtual   Boolean  @default(false)
+  meetingLink String?
+  status      String   @default("upcoming") // "upcoming", "ongoing", "completed", "cancelled"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendees   EventAttendee[]
+  
+  @@map("events")
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("registered") // "registered", "attended", "cancelled"
+  createdAt DateTime @default(now())
+  
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@map("event_attendees")
+}
+
+model AstroProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  birthDate   DateTime
+  birthTime   String?
+  birthPlace  String?
+  latitude    Float?
+  longitude   Float?
+  timezone    String?
+  rashi       String?  // Moon sign
+  nakshatra   String?  // Birth star
+  mangal      String?  // Mars dosha status
+  horoscope   String?  // Birth chart URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("astro_profiles")
+}
+
+model SuccessStory {
+  id          String   @id @default(cuid())
+  userId1     String
+  userId2     String
+  story       String
+  photos      String?  // JSON array of photo URLs
+  weddingDate DateTime?
+  isPublished Boolean  @default(false)
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("success_stories")
+}
+
+model VirtualGift {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  price       Float
+  currency    String @default("INR")
+  category    String // "romantic", "fun", "traditional"
+  
+  @@map("virtual_gifts")
+}
+
+model SentGift {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  giftId      String
+  message     String?
+  isPrivate   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  @@map("sent_gifts")
+}
+
+model Settings {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  value         String
+  description   String?
+  isPublic      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("settings")
+}
