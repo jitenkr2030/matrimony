@@ -20,6 +20,7 @@ import ProfileManagement from '@/components/ProfileManagement'
 import SafetyCenter from '@/components/SafetyCenter'
 import Community from '@/components/Community'
 import Multimedia from '@/components/Multimedia'
+import Monetization from '@/components/Monetization'
 import { 
   Heart, 
   Search, 
@@ -619,13 +620,14 @@ export default function MatrimonyApp() {
         {/* Main Content */}
         <main className="flex-1">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-7 sticky top-16 z-40 bg-white border-b">
+            <TabsList className="grid w-full grid-cols-8 sticky top-16 z-40 bg-white border-b">
               <TabsTrigger value="search">Search</TabsTrigger>
               <TabsTrigger value="matches">AI Matches</TabsTrigger>
               <TabsTrigger value="messages">Messages</TabsTrigger>
               <TabsTrigger value="profile">My Profile</TabsTrigger>
               <TabsTrigger value="community">Community</TabsTrigger>
               <TabsTrigger value="multimedia">Multimedia</TabsTrigger>
+              <TabsTrigger value="premium">Premium</TabsTrigger>
               <TabsTrigger value="safety">Safety</TabsTrigger>
             </TabsList>
             
@@ -818,6 +820,10 @@ export default function MatrimonyApp() {
               <Multimedia />
             </TabsContent>
 
+            <TabsContent value="premium">
+              <Monetization />
+            </TabsContent>
+
             <TabsContent value="safety">
               <SafetyCenter />
             </TabsContent>
@@ -826,7 +832,7 @@ export default function MatrimonyApp() {
       </div>
 
       {/* Premium Promotion */}
-      {activeTab !== 'profile' && activeTab !== 'safety' && activeTab !== 'community' && activeTab !== 'multimedia' && (
+      {activeTab !== 'profile' && activeTab !== 'safety' && activeTab !== 'community' && activeTab !== 'multimedia' && activeTab !== 'premium' && (
         <div className="fixed bottom-4 right-4 z-50">
           <Alert className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 shadow-lg max-w-sm">
             <Crown className="h-4 w-4 text-yellow-600" />
